@@ -13,7 +13,7 @@ interface AdbPushProgress {
   current: number
   total: number
   file: string
-  success: boolean
+  status: "pushing" | "done" | "error"
   error: string | null
 }
 
@@ -22,9 +22,10 @@ export function AdbPushForm() {
   const [sourceDir, setSourceDir] = useState<string | null>(null)
   const [targetDir, setTargetDir] = useState("/sdcard/DCIM/LiveMux/")
   const [adbOk, setAdbOk] = useState<boolean | null>(null)
-  const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle")
+  const [formStatus, setFormStatus] = useState<"idle" | "running" | "done" | "error">("idle")
   const [errorMsg, setErrorMsg] = useState("")
-  const [progressItems, setProgressItems] = useState<AdbPushProgress[]>([])
+  const [completedItems, setCompletedItems] = useState<AdbPushProgress[]>([])
+  const [currentFile, setCurrentFile] = useState<AdbPushProgress | null>(null)
   const [progressPercent, setProgressPercent] = useState(0)
 
   useEffect(() => {
@@ -38,15 +39,23 @@ export function AdbPushForm() {
 
   async function handlePush() {
     if (!sourceDir || !targetDir) return
-    setStatus("running")
+    setFormStatus("running")
     setErrorMsg("")
-    setProgressItems([])
+    setCompletedItems([])
+    setCurrentFile(null)
     setProgressPercent(0)
 
     const unlisten = await listen<AdbPushProgress>("adb-push-progress", (event) => {
       const p = event.payload
-      setProgressItems((prev) => [...prev, p])
-      setProgressPercent(Math.round((p.current / p.total) * 100))
+      if (p.status === "pushing") {
+        setCurrentFile(p)
+        // Progress: (completed files + 0.5 for in-progress) / total
+        setProgressPercent(Math.round(((p.current - 1) / p.total) * 100))
+      } else {
+        setCurrentFile(null)
+        setCompletedItems((prev) => [...prev, p])
+        setProgressPercent(Math.round((p.current / p.total) * 100))
+      }
     })
 
     try {
@@ -54,9 +63,9 @@ export function AdbPushForm() {
         sourceDir,
         targetDir,
       })
-      setStatus("done")
+      setFormStatus("done")
     } catch (e) {
-      setStatus("error")
+      setFormStatus("error")
       setErrorMsg(String(e))
     } finally {
       unlisten()
@@ -98,39 +107,51 @@ export function AdbPushForm() {
         {/* Action */}
         <Button
           onClick={handlePush}
-          disabled={!sourceDir || !targetDir || status === "running"}
+          disabled={!sourceDir || !targetDir || formStatus === "running"}
           className="w-full"
         >
-          {status === "running" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {status === "running" ? t("adb.pushing") : t("adb.push")}
+          {formStatus === "running" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {formStatus === "running" ? t("adb.pushing") : t("adb.push")}
         </Button>
 
         {/* Progress */}
-        {status === "running" && <Progress value={progressPercent} />}
-
-        {status === "done" && (
-          <div className="flex items-center gap-2 text-sm text-success">
-            <Check className="h-4 w-4" /> {t("adb.complete", { count: progressItems.length })}
+        {formStatus === "running" && (
+          <div className="space-y-2">
+            <Progress value={progressPercent} />
+            {currentFile && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                <span className="truncate">
+                  [{currentFile.current}/{currentFile.total}] {fileName(currentFile.file)}
+                </span>
+              </div>
+            )}
           </div>
         )}
-        {status === "error" && (
+
+        {formStatus === "done" && (
+          <div className="flex items-center gap-2 text-sm text-success">
+            <Check className="h-4 w-4" /> {t("adb.complete", { count: completedItems.length })}
+          </div>
+        )}
+        {formStatus === "error" && (
           <div className="text-sm text-destructive flex items-center gap-2">
             <X className="h-4 w-4" /> {errorMsg}
           </div>
         )}
 
-        {/* Progress list */}
-        {progressItems.length > 0 && (
+        {/* Completed list */}
+        {completedItems.length > 0 && (
           <div className="max-h-48 overflow-y-auto space-y-1 text-xs">
-            {progressItems.map((item, i) => (
+            {completedItems.map((item, i) => (
               <div key={i} className="flex items-center gap-2">
-                {item.success ? (
+                {item.status === "done" ? (
                   <Badge variant="secondary" className="text-success">{t("adb.ok")}</Badge>
                 ) : (
                   <Badge variant="destructive">{t("adb.err")}</Badge>
                 )}
                 <span className="truncate">{fileName(item.file)}</span>
-                {item.error && !item.success && (
+                {item.error && (
                   <span className="text-muted-foreground truncate">{item.error}</span>
                 )}
               </div>

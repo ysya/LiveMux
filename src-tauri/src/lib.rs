@@ -21,7 +21,7 @@ struct AdbPushProgress {
     current: usize,
     total: usize,
     file: String,
-    success: bool,
+    status: String, // "pushing" | "done" | "error"
     error: Option<String>,
 }
 
@@ -118,17 +118,30 @@ fn adb_push_directory(
 
     for (i, file) in files.iter().enumerate() {
         let file_str = file.to_string_lossy();
+
+        // Emit "pushing" before starting transfer
+        let _ = window.emit(
+            "adb-push-progress",
+            &AdbPushProgress {
+                current: i + 1,
+                total,
+                file: file_str.to_string(),
+                status: "pushing".into(),
+                error: None,
+            },
+        );
+
         let result = Command::new("adb")
             .args(["push", &file_str, &format!("{}/", target_dir)])
             .output();
 
-        let (success, error) = match result {
-            Ok(out) if out.status.success() => (true, None),
+        let (status, error) = match result {
+            Ok(out) if out.status.success() => ("done".to_string(), None),
             Ok(out) => (
-                false,
+                "error".to_string(),
                 Some(String::from_utf8_lossy(&out.stderr).trim().to_string()),
             ),
-            Err(e) => (false, Some(e.to_string())),
+            Err(e) => ("error".to_string(), Some(e.to_string())),
         };
 
         let _ = window.emit(
@@ -137,7 +150,7 @@ fn adb_push_directory(
                 current: i + 1,
                 total,
                 file: file_str.to_string(),
-                success,
+                status,
                 error,
             },
         );
