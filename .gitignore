@@ -1,0 +1,35 @@
+# Rust
+/target
+
+# ExifTool (Windows)
+exiftool.exe
+exiftool_files/
+
+# Node.js
+node_modules/
+
+# Media files (test data)
+*.mp4
+*.mov
+*.jpg
+*.jpeg
+*.heic
+*.avif
+*.heif
+*.MP4
+*.MOV
+*.JPG
+*.JPEG
+*.HEIC
+*.AVIF
+*.HEIF
+
+# macOS
+.DS_Store
+._*
+
+# Environments
+.env
+
+# Logs
+*.log

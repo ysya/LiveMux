@@ -1,0 +1,61 @@
+{
+  "app": {
+    "title": "LiveMux",
+    "exiftoolError": "找不到 ExifTool。請先安裝 ExifTool 後重新啟動應用程式。",
+    "ffmpegWarning": "找不到 FFmpeg。iPhone MOV 影片將不會轉換為 MP4，可能導致 Google Photos 無法播放動態照片。建議安裝 FFmpeg 以獲得最佳相容性。",
+    "tabMux": "單檔合併",
+    "tabBatch": "批次處理",
+    "tabAdb": "ADB 推送"
+  },
+  "mux": {
+    "title": "單檔合併",
+    "selectImage": "選擇圖片...",
+    "selectVideo": "選擇影片...",
+    "filterImages": "圖片",
+    "filterVideos": "影片",
+    "overwrite": "覆蓋原始檔",
+    "overwriteDesc": "將原始圖片替換為動態照片",
+    "deleteVideo": "刪除來源影片",
+    "deleteVideoDesc": "合併後刪除影片檔案",
+    "keepTemp": "保留暫存檔",
+    "keepTempDesc": "不刪除中間產生的 XMP 暫存檔",
+    "skipXmp": "跳過 XMP",
+    "skipXmpDesc": "不嵌入 XMP 中繼資料（較快但相容性較低）",
+    "processing": "處理中...",
+    "mux": "合併",
+    "done": "完成！"
+  },
+  "batch": {
+    "title": "批次處理",
+    "selectInput": "選擇輸入資料夾...",
+    "selectOutput": "輸出資料夾（選填）...",
+    "recursive": "遞迴處理",
+    "recursiveDesc": "包含子資料夾中的檔案",
+    "exifMatch": "EXIF 配對",
+    "exifMatchDesc": "依 EXIF 中繼資料配對圖片與影片，而非檔名",
+    "incremental": "增量處理",
+    "incrementalDesc": "跳過已包含動態照片資料的檔案",
+    "copyUnmuxed": "複製未配對",
+    "copyUnmuxedDesc": "將沒有對應影片的圖片複製到輸出資料夾",
+    "overwrite": "覆蓋",
+    "overwriteDesc": "覆蓋輸出資料夾中的既有檔案",
+    "deleteVideos": "刪除影片",
+    "deleteVideosDesc": "合併後刪除來源影片檔案",
+    "processing": "處理中...",
+    "startBatch": "開始批次處理",
+    "batchComplete": "批次完成（共 {{count}} 個檔案）",
+    "ok": "成功",
+    "err": "錯誤"
+  },
+  "adb": {
+    "title": "ADB 推送",
+    "selectSource": "選擇來源資料夾...",
+    "targetPath": "裝置目標路徑",
+    "adbNotFound": "找不到 ADB 或未連接裝置。請安裝 Android SDK Platform Tools。",
+    "push": "推送到裝置",
+    "pushing": "推送中...",
+    "complete": "推送完成（共 {{count}} 個檔案）",
+    "ok": "成功",
+    "err": "錯誤"
+  }
+}

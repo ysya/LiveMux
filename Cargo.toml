@@ -1,0 +1,30 @@
+[workspace]
+members = [".", "crates/livemux-core", "src-tauri"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
+[package]
+name = "livemux-cli"
+version.workspace = true
+edition.workspace = true
+description = "CLI for LiveMux — mux HEIC/JPG Live Photos into Motion Photos"
+
+[dependencies]
+livemux-core = { path = "crates/livemux-core" }
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[[bin]]
+name = "livemux"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true

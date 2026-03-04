@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="play" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="100%" style="stop-color:#e0e7ff"/>
+    </linearGradient>
+    <linearGradient id="mountain" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#a5b4fc"/>
+      <stop offset="100%" style="stop-color:#818cf8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#bg)"/>
+
+  <!-- Subtle inner shadow -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+
+  <!-- Photo frame (rounded rect) -->
+  <rect x="72" y="100" width="260" height="220" rx="24" ry="24" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" stroke-width="3"/>
+
+  <!-- Sun in photo -->
+  <circle cx="152" cy="172" r="28" fill="rgba(255,255,255,0.5)"/>
+
+  <!-- Mountain in photo -->
+  <path d="M72 296 L160 200 L220 252 L270 192 L332 296 Z" fill="url(#mountain)" opacity="0.6"/>
+
+  <!-- Bottom clip of photo frame -->
+  <rect x="72" y="296" width="260" height="24" rx="0" ry="0" fill="url(#bg)"/>
+  <path d="M72 296 L332 296 L332 296 Q332 320 308 320 L96 320 Q72 320 72 296 Z" fill="url(#bg)"/>
+
+  <!-- Motion lines (3 curved lines suggesting movement) -->
+  <path d="M300 160 Q340 160 340 200" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M320 140 Q380 140 380 220" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M340 120 Q420 120 420 240" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Play button circle -->
+  <circle cx="340" cy="340" r="100" fill="rgba(255,255,255,0.95)"/>
+  <circle cx="340" cy="340" r="100" fill="none" stroke="rgba(99,102,241,0.3)" stroke-width="3"/>
+
+  <!-- Play triangle -->
+  <path d="M310 290 L310 390 L395 340 Z" fill="url(#bg)"/>
+</svg>

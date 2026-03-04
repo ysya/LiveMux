@@ -1,0 +1,61 @@
+{
+  "app": {
+    "title": "LiveMux",
+    "exiftoolError": "ExifTool not found. Please install ExifTool and restart the app.",
+    "ffmpegWarning": "FFmpeg not found. iPhone MOV videos will not be remuxed to MP4, which may cause playback issues on Google Photos. Install FFmpeg for best compatibility.",
+    "tabMux": "Single Mux",
+    "tabBatch": "Batch Directory",
+    "tabAdb": "ADB Push"
+  },
+  "mux": {
+    "title": "Single Mux",
+    "selectImage": "Select image...",
+    "selectVideo": "Select video...",
+    "filterImages": "Images",
+    "filterVideos": "Videos",
+    "overwrite": "Overwrite original",
+    "overwriteDesc": "Replace the original image file with the motion photo",
+    "deleteVideo": "Delete source video",
+    "deleteVideoDesc": "Remove the video file after muxing",
+    "keepTemp": "Keep temp files",
+    "keepTempDesc": "Do not delete intermediate XMP sidecar files",
+    "skipXmp": "Skip XMP",
+    "skipXmpDesc": "Do not embed XMP metadata (faster, less compatible)",
+    "processing": "Processing...",
+    "mux": "Mux",
+    "done": "Done!"
+  },
+  "batch": {
+    "title": "Batch Directory",
+    "selectInput": "Select input directory...",
+    "selectOutput": "Output directory (optional)...",
+    "recursive": "Recursive",
+    "recursiveDesc": "Process subdirectories recursively",
+    "exifMatch": "EXIF match",
+    "exifMatchDesc": "Match image-video pairs by EXIF metadata instead of filename",
+    "incremental": "Incremental",
+    "incrementalDesc": "Skip files that already contain motion photo data",
+    "copyUnmuxed": "Copy unmuxed",
+    "copyUnmuxedDesc": "Copy images without a matching video to output directory",
+    "overwrite": "Overwrite",
+    "overwriteDesc": "Replace existing files in the output directory",
+    "deleteVideos": "Delete videos",
+    "deleteVideosDesc": "Remove source video files after muxing",
+    "processing": "Processing...",
+    "startBatch": "Start Batch",
+    "batchComplete": "Batch complete ({{count}} files)",
+    "ok": "OK",
+    "err": "ERR"
+  },
+  "adb": {
+    "title": "ADB Push",
+    "selectSource": "Select source directory...",
+    "targetPath": "Target path on device",
+    "adbNotFound": "ADB not found or no device connected. Install Android SDK Platform Tools.",
+    "push": "Push to Device",
+    "pushing": "Pushing...",
+    "complete": "Push complete ({{count}} files)",
+    "ok": "OK",
+    "err": "ERR"
+  }
+}
