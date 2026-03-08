@@ -1,6 +1,6 @@
 {
   "productName": "LiveMux",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "identifier": "com.livemux.desktop",
   "build": {
     "devUrl": "http://localhost:5177",
