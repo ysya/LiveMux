@@ -64,11 +64,18 @@ fn main() -> Result<()> {
                 delete_temp: !cli.keep_temp,
                 overwrite: cli.overwrite,
             };
-            batch::mux_directory(&config, &mut et, |progress| {
-                if progress.success {
-                    info!("[{}/{}] {}", progress.current, progress.total, progress.file);
-                }
-            })?;
+            batch::mux_directory(
+                &config,
+                &mut et,
+                |total| {
+                    info!("Found {} image/video pairs", total);
+                },
+                |progress| {
+                    if progress.success {
+                        info!("[{}/{}] {}", progress.current, progress.total, progress.file);
+                    }
+                },
+            )?;
         }
     }
 

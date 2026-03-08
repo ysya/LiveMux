@@ -42,6 +42,7 @@
     "deleteVideos": "Delete videos",
     "deleteVideosDesc": "Remove source video files after muxing",
     "scanning": "Scanning for image/video pairs...",
+    "noPairs": "No image/video pairs found in this directory",
     "processing": "Processing...",
     "startBatch": "Start Batch",
     "batchComplete": "Batch complete ({{succeeded}} / {{total}} files)",

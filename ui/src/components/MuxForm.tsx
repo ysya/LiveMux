@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { open } from "@tauri-apps/plugin-dialog"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { FileImage, FileVideo, Loader2, Check, X } from "lucide-react"
@@ -63,10 +63,7 @@ export function MuxForm() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t("mux.title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {/* File pickers */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">

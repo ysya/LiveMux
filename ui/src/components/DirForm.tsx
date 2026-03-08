@@ -4,7 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog"
 import { listen } from "@tauri-apps/api/event"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +32,7 @@ export function DirForm() {
   const [progressItems, setProgressItems] = useState<BatchProgress[]>([])
   const [progressPercent, setProgressPercent] = useState(0)
   const [currentProcessing, setCurrentProcessing] = useState<{ current: number; total: number; file: string } | null>(null)
+  const [pairsFound, setPairsFound] = useState<number | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -58,9 +59,13 @@ export function DirForm() {
     setProgressItems([])
     setProgressPercent(0)
     setCurrentProcessing(null)
+    setPairsFound(null)
 
     const unlistenPhase = await listen<PhaseEvent>("mux-phase", (event) => {
       setPhase(event.payload.phase)
+      if (event.payload.total !== null) {
+        setPairsFound(event.payload.total)
+      }
     })
 
     const unlisten = await listen<BatchProgress>("mux-progress", (event) => {
@@ -98,10 +103,7 @@ export function DirForm() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t("batch.title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {/* Directory pickers */}
         <div className="space-y-2">
           <Button variant="outline" onClick={pickDir} disabled={status === "running"} className="w-full justify-start">
@@ -169,6 +171,11 @@ export function DirForm() {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin shrink-0" />
             <span>{t("batch.scanning")}</span>
+          </div>
+        )}
+        {pairsFound !== null && pairsFound === 0 && status === "running" && (
+          <div className="text-sm text-yellow-600 dark:text-yellow-400">
+            {t("batch.noPairs")}
           </div>
         )}
         {status === "running" && phase === "processing" && (

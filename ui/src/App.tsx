@@ -28,9 +28,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen p-6 max-w-xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold">{t("app.title")}</h1>
+    <div className="p-6 max-w-xl mx-auto">
+      <div className="flex justify-end mb-2">
         <Button variant="ghost" size="sm" onClick={toggleLanguage}>
           {i18n.language === "zh-TW" ? "EN" : "中文"}
         </Button>

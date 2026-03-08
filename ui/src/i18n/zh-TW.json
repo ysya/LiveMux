@@ -42,6 +42,7 @@
     "deleteVideos": "刪除影片",
     "deleteVideosDesc": "合併後刪除來源影片檔案",
     "scanning": "正在掃描圖片與影片配對...",
+    "noPairs": "此資料夾中未找到圖片與影片配對",
     "processing": "處理中...",
     "startBatch": "開始批次處理",
     "batchComplete": "批次完成（{{succeeded}} / {{total}} 個檔案成功）",

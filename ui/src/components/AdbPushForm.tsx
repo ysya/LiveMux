@@ -4,7 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog"
 import { listen } from "@tauri-apps/api/event"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Folder, Loader2, Check, X, Smartphone } from "lucide-react"
@@ -103,10 +103,7 @@ export function AdbPushForm() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t("adb.title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {adbOk === false && (
           <div className="p-3 rounded-md bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 text-sm">
             {t("adb.adbNotFound")}

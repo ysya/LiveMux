@@ -49,14 +49,17 @@ pub struct BatchProgress {
     pub error: Option<String>,
 }
 
-/// Run batch mux on a directory. Calls `on_progress` for each file processed.
-pub fn mux_directory<F>(
+/// Run batch mux on a directory.
+/// Calls `on_scan_complete(total)` after scanning, and `on_progress` for each file processed.
+pub fn mux_directory<F, G>(
     config: &BatchConfig,
     et: &mut ExifTool,
+    mut on_scan_complete: G,
     mut on_progress: F,
 ) -> Result<()>
 where
     F: FnMut(BatchProgress),
+    G: FnMut(usize),
 {
     if config.overwrite && config.output_dir.is_some() {
         return Err(crate::error::LiveMuxError::ArgConflict(
@@ -76,6 +79,7 @@ where
 
     let total = pairs.len();
     info!("Found {} image/video pairs", total);
+    on_scan_complete(total);
 
     let mut matched_images: HashSet<PathBuf> = HashSet::new();
 

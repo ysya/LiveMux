@@ -112,9 +112,23 @@ async fn mux_directory(
     let et = state.exiftool.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let mut et = et.lock().map_err(|e| e.to_string())?;
-        batch::mux_directory(&config, &mut et, |progress: BatchProgress| {
-            let _ = window.emit("mux-progress", &progress);
-        })
+        let window2 = window.clone();
+        batch::mux_directory(
+            &config,
+            &mut et,
+            |total| {
+                let _ = window2.emit(
+                    "mux-phase",
+                    &PhaseEvent {
+                        phase: "processing".into(),
+                        total: Some(total),
+                    },
+                );
+            },
+            |progress: BatchProgress| {
+                let _ = window.emit("mux-progress", &progress);
+            },
+        )
         .map_err(|e| e.to_string())?;
         Ok("ok".into())
     })
