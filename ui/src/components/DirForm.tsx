@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { invoke } from "@tauri-apps/api/core"
 import { open } from "@tauri-apps/plugin-dialog"
 import { listen } from "@tauri-apps/api/event"
@@ -11,6 +11,11 @@ import { Badge } from "@/components/ui/badge"
 import { Folder, FolderOutput, Loader2, Check, X } from "lucide-react"
 import type { BatchConfig, BatchProgress } from "@/types/livemux"
 
+interface PhaseEvent {
+  phase: "scanning" | "processing"
+  total: number | null
+}
+
 export function DirForm() {
   const { t } = useTranslation()
   const [directory, setDirectory] = useState<string | null>(null)
@@ -22,9 +27,18 @@ export function DirForm() {
   const [overwrite, setOverwrite] = useState(false)
   const [deleteVideo, setDeleteVideo] = useState(false)
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle")
+  const [phase, setPhase] = useState<"idle" | "scanning" | "processing">("idle")
   const [errorMsg, setErrorMsg] = useState("")
   const [progressItems, setProgressItems] = useState<BatchProgress[]>([])
   const [progressPercent, setProgressPercent] = useState(0)
+  const [currentProcessing, setCurrentProcessing] = useState<{ current: number; total: number; file: string } | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight
+    }
+  }, [progressItems])
 
   async function pickDir() {
     const selected = await open({ directory: true })
@@ -39,12 +53,20 @@ export function DirForm() {
   async function handleBatch() {
     if (!directory) return
     setStatus("running")
+    setPhase("scanning")
     setErrorMsg("")
     setProgressItems([])
     setProgressPercent(0)
+    setCurrentProcessing(null)
+
+    const unlistenPhase = await listen<PhaseEvent>("mux-phase", (event) => {
+      setPhase(event.payload.phase)
+    })
 
     const unlisten = await listen<BatchProgress>("mux-progress", (event) => {
       const p = event.payload
+      setPhase("processing")
+      setCurrentProcessing({ current: p.current, total: p.total, file: p.file })
       setProgressItems((prev) => [...prev, p])
       setProgressPercent(Math.round((p.current / p.total) * 100))
     })
@@ -69,6 +91,8 @@ export function DirForm() {
       setErrorMsg(String(e))
     } finally {
       unlisten()
+      unlistenPhase()
+      setPhase("idle")
     }
   }
 
@@ -80,18 +104,18 @@ export function DirForm() {
       <CardContent className="space-y-4">
         {/* Directory pickers */}
         <div className="space-y-2">
-          <Button variant="outline" onClick={pickDir} className="w-full justify-start">
+          <Button variant="outline" onClick={pickDir} disabled={status === "running"} className="w-full justify-start">
             <Folder className="mr-2 h-4 w-4" />
             {directory ? directory : t("batch.selectInput")}
           </Button>
-          <Button variant="outline" onClick={pickOutputDir} className="w-full justify-start">
+          <Button variant="outline" onClick={pickOutputDir} disabled={status === "running"} className="w-full justify-start">
             <FolderOutput className="mr-2 h-4 w-4" />
             {outputDir ? outputDir : t("batch.selectOutput")}
           </Button>
         </div>
 
         {/* Options */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className={`grid grid-cols-2 gap-3 ${status === "running" ? "opacity-50 pointer-events-none" : ""}`}>
           <OptionCheckbox
             checked={recursive}
             onChange={setRecursive}
@@ -141,11 +165,36 @@ export function DirForm() {
         </Button>
 
         {/* Progress */}
-        {status === "running" && <Progress value={progressPercent} />}
+        {status === "running" && phase === "scanning" && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+            <span>{t("batch.scanning")}</span>
+          </div>
+        )}
+        {status === "running" && phase === "processing" && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Progress value={progressPercent} className="flex-1" />
+              <span className="text-xs text-muted-foreground tabular-nums shrink-0">{progressPercent}%</span>
+            </div>
+            {currentProcessing && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                <span className="truncate">
+                  [{currentProcessing.current}/{currentProcessing.total}] {fileName(currentProcessing.file)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {status === "done" && (
           <div className="flex items-center gap-2 text-sm text-success">
-            <Check className="h-4 w-4" /> {t("batch.batchComplete", { count: progressItems.length })}
+            <Check className="h-4 w-4" />
+            {t("batch.batchComplete", {
+              succeeded: progressItems.filter((i) => i.success).length,
+              total: progressItems.length,
+            })}
           </div>
         )}
         {status === "error" && (
@@ -156,7 +205,7 @@ export function DirForm() {
 
         {/* Progress list */}
         {progressItems.length > 0 && (
-          <div className="max-h-48 overflow-y-auto space-y-1 text-xs">
+          <div ref={listRef} className="max-h-48 overflow-y-auto space-y-1 text-xs">
             {progressItems.map((item, i) => (
               <div key={i} className="flex items-center gap-2">
                 {item.success ? (

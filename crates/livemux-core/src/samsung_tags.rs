@@ -83,6 +83,11 @@ impl SamsungTags {
     }
 
     /// Returns the video size value for XMP `Item:Length` on MotionPhoto.
+    ///
+    /// This is the distance from the video start to end of file (footer_len - image_padding),
+    /// not the raw video byte count. Google Photos uses `file_size - Item:Length` to locate
+    /// the video start, so this value must include the Samsung SEFD trailer that follows
+    /// the video data within the footer.
     pub fn get_video_size(&self) -> usize {
         self.video_footer().len() - self.get_image_padding()
     }

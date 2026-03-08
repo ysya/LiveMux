@@ -17,6 +17,12 @@ pub struct AppState {
 }
 
 #[derive(Clone, Serialize)]
+struct PhaseEvent {
+    phase: String, // "scanning" | "processing"
+    total: Option<usize>,
+}
+
+#[derive(Clone, Serialize)]
 struct AdbPushProgress {
     current: usize,
     total: usize,
@@ -55,6 +61,25 @@ fn check_adb() -> bool {
 }
 
 #[tauri::command]
+fn count_image_files(directory: String) -> Result<usize, String> {
+    let entries = std::fs::read_dir(&directory)
+        .map_err(|e| format!("Failed to read directory: {e}"))?;
+    let count = entries
+        .flatten()
+        .filter(|entry| {
+            let path = entry.path();
+            path.is_file()
+                && path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| IMAGE_EXTENSIONS.contains(&e.to_lowercase().as_str()))
+                    .unwrap_or(false)
+        })
+        .count();
+    Ok(count)
+}
+
+#[tauri::command]
 fn mux_single(state: tauri::State<AppState>, config: MuxerConfig) -> Result<String, String> {
     let mut et = state.exiftool.lock().map_err(|e| e.to_string())?;
     let mut muxer = Muxer::new(config, &mut et).map_err(|e| e.to_string())?;
@@ -68,6 +93,14 @@ fn mux_directory(
     window: tauri::Window,
     config: BatchConfig,
 ) -> Result<String, String> {
+    let _ = window.emit(
+        "mux-phase",
+        &PhaseEvent {
+            phase: "scanning".into(),
+            total: None,
+        },
+    );
+
     let mut et = state.exiftool.lock().map_err(|e| e.to_string())?;
     batch::mux_directory(&config, &mut et, |progress: BatchProgress| {
         let _ = window.emit("mux-progress", &progress);
@@ -94,6 +127,15 @@ fn adb_push_directory(
             String::from_utf8_lossy(&mkdir.stderr)
         ));
     }
+
+    // Emit scanning phase
+    let _ = window.emit(
+        "adb-push-phase",
+        &PhaseEvent {
+            phase: "scanning".into(),
+            total: None,
+        },
+    );
 
     // Collect image files from source directory
     let source_path = Path::new(&source_dir);
@@ -136,7 +178,27 @@ fn adb_push_directory(
             .output();
 
         let (status, error) = match result {
-            Ok(out) if out.status.success() => ("done".to_string(), None),
+            Ok(out) if out.status.success() => {
+                // Trigger Android MediaStore scanner so the file is indexed
+                let file_name = file.file_name().unwrap_or_default().to_string_lossy();
+                let device_path = format!(
+                    "file://{}{}",
+                    target_dir.trim_end_matches('/'),
+                    if target_dir.ends_with('/') { "" } else { "/" }
+                );
+                let _ = Command::new("adb")
+                    .args([
+                        "shell",
+                        "am",
+                        "broadcast",
+                        "-a",
+                        "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+                        "-d",
+                        &format!("{}{}", device_path, file_name),
+                    ])
+                    .output();
+                ("done".to_string(), None)
+            }
             Ok(out) => (
                 "error".to_string(),
                 Some(String::from_utf8_lossy(&out.stderr).trim().to_string()),
@@ -172,6 +234,7 @@ pub fn run() {
             check_exiftool,
             check_ffmpeg,
             check_adb,
+            count_image_files,
             mux_single,
             mux_directory,
             adb_push_directory,

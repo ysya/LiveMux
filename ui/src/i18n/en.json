@@ -41,9 +41,10 @@
     "overwriteDesc": "Replace existing files in the output directory",
     "deleteVideos": "Delete videos",
     "deleteVideosDesc": "Remove source video files after muxing",
+    "scanning": "Scanning for image/video pairs...",
     "processing": "Processing...",
     "startBatch": "Start Batch",
-    "batchComplete": "Batch complete ({{count}} files)",
+    "batchComplete": "Batch complete ({{succeeded}} / {{total}} files)",
     "ok": "OK",
     "err": "ERR"
   },
@@ -52,9 +53,12 @@
     "selectSource": "Select source directory...",
     "targetPath": "Target path on device",
     "adbNotFound": "ADB not found or no device connected. Install Android SDK Platform Tools.",
+    "scanning": "Scanning files and preparing device...",
+    "fileCount": "{{count}} image files found",
+    "noFiles": "No image files found in this directory",
     "push": "Push to Device",
     "pushing": "Pushing...",
-    "complete": "Push complete ({{count}} files)",
+    "complete": "Push complete ({{succeeded}} / {{total}} files)",
     "ok": "OK",
     "err": "ERR"
   }
