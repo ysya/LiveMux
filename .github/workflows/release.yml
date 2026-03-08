@@ -72,29 +72,15 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
-      # Windows: download ExifTool standalone exe and swap bundle resources
+      # Windows: download ExifTool standalone exe to the path declared in tauri.windows.conf.json
       - name: Setup ExifTool (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $url = "https://exiftool.org/exiftool-13.52_64.zip"
-          Invoke-WebRequest -Uri $url -OutFile exiftool.zip
+          Invoke-WebRequest -Uri "https://exiftool.org/exiftool-13.52_64.zip" -OutFile exiftool.zip
           Expand-Archive -Path exiftool.zip -DestinationPath exiftool-tmp
-          # Find the exe (may be named exiftool(-k).exe or exiftool.exe)
-          $exe = Get-ChildItem -Path exiftool-tmp -Filter '*.exe' -Recurse | Select-Object -First 1
-          if (-not $exe) { throw "ExifTool exe not found in zip" }
           New-Item -ItemType Directory -Force -Path src-tauri/resources/exiftool-win
-          Copy-Item $exe.FullName src-tauri/resources/exiftool-win/exiftool.exe
-          # Verify the file exists
-          if (-not (Test-Path src-tauri/resources/exiftool-win/exiftool.exe)) {
-            throw "exiftool.exe was not placed correctly"
-          }
-          Write-Host "ExifTool exe placed at: src-tauri/resources/exiftool-win/exiftool.exe"
-          # Replace bundle resources to point to Windows exe
-          $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
-          $conf.bundle.resources = @{ "resources/exiftool-win/exiftool.exe" = "resources/exiftool-win/exiftool.exe" }
-          $conf | ConvertTo-Json -Depth 10 | Set-Content src-tauri/tauri.conf.json
-          Write-Host "Updated tauri.conf.json bundle resources"
+          Copy-Item "exiftool-tmp/exiftool-13.52_64/exiftool(-k).exe" src-tauri/resources/exiftool-win/exiftool.exe
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0

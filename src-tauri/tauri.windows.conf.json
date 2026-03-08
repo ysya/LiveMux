@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "resources/exiftool-win/exiftool.exe": "resources/exiftool-win/exiftool.exe"
+    }
+  }
+}

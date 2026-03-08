@@ -31,9 +31,6 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": {
-      "resources/exiftool/exiftool": "resources/exiftool/exiftool",
-      "resources/exiftool/lib/": "resources/exiftool/lib/"
-    }
+    "resources": {}
   }
 }

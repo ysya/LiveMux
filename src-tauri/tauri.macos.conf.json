@@ -1,0 +1,8 @@
+{
+  "bundle": {
+    "resources": {
+      "resources/exiftool/exiftool": "resources/exiftool/exiftool",
+      "resources/exiftool/lib/": "resources/exiftool/lib/"
+    }
+  }
+}
