@@ -74,13 +74,18 @@ impl ExifTool {
     /// Resolve the exiftool executable path.
     ///
     /// Priority:
-    /// 1. Bundled exiftool script in `bundled_dir` (run via `perl`)
+    /// 1. Bundled exiftool.exe (Windows) or exiftool script via `perl` (macOS/Linux)
     /// 2. System `exiftool` on PATH
     fn resolve_exiftool(bundled_dir: Option<&Path>) -> (PathBuf, Vec<String>) {
         if let Some(dir) = bundled_dir {
+            // Windows: look for standalone exe
+            let exe = dir.join("exiftool.exe");
+            if exe.exists() {
+                return (exe, vec![]);
+            }
+            // macOS/Linux: look for Perl script
             let script = dir.join("exiftool");
             if script.exists() {
-                // Use perl to run the bundled script
                 return (PathBuf::from("perl"), vec![script.to_string_lossy().into_owned()]);
             }
         }

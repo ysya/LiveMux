@@ -329,13 +329,20 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Resolve bundled exiftool resource path
-            let resource_path = app
-                .path()
-                .resource_dir()
-                .ok()
-                .map(|dir| dir.join("resources").join("exiftool"));
-
-            let exiftool_dir = resource_path.filter(|p| p.join("exiftool").exists());
+            let resource_dir = app.path().resource_dir().ok();
+            let exiftool_dir = resource_dir.and_then(|dir| {
+                // Windows: check for exiftool.exe
+                let win_dir = dir.join("resources").join("exiftool-win");
+                if win_dir.join("exiftool.exe").exists() {
+                    return Some(win_dir);
+                }
+                // macOS/Linux: check for Perl script
+                let unix_dir = dir.join("resources").join("exiftool");
+                if unix_dir.join("exiftool").exists() {
+                    return Some(unix_dir);
+                }
+                None
+            });
 
             app.manage(AppState {
                 exiftool_dir: exiftool_dir.map(|p| Arc::new(p)),
