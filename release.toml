@@ -1,11 +1,8 @@
-[workspace]
 shared-version = true
 tag-name = "v{{version}}"
 tag-message = "v{{version}}"
-
-# Interactive confirmation before each step (like release-it)
 pre-release-commit-message = "chore: release v{{version}}"
-publish = false          # We don't publish to crates.io
+publish = false
 push = true
 tag = true
 
