@@ -1,7 +1,7 @@
 {
   "productName": "LiveMux",
   "version": "0.1.1",
-  "identifier": "com.livemux.app",
+  "identifier": "com.livemux.desktop",
   "build": {
     "devUrl": "http://localhost:5177",
     "frontendDist": "../ui/dist",
