@@ -100,10 +100,12 @@ impl<'et> Muxer<'et> {
         info!("Processing {}", self.config.image_path.display());
 
         // Step 1: Get metadata
+        info!("[mux] Step 1: Reading metadata...");
         let metadata = self.exiftool.get_metadata(&[
             self.config.image_path.as_path(),
             self.config.video_path.as_path(),
         ])?;
+        info!("[mux] Step 1: Done");
         let image_metadata = metadata.first().cloned().unwrap_or_default();
         let video_metadata = metadata.get(1).cloned().unwrap_or_default();
 
@@ -117,10 +119,11 @@ impl<'et> Muxer<'et> {
         let effective_video_path: PathBuf;
         if ffmpeg::needs_remux(&self.config.video_path) {
             if ffmpeg::check_ffmpeg() {
+                info!("[mux] Step 2.5: Remuxing MOV to MP4...");
                 let mp4_path = enrich_fname(&self.config.video_path, "REMUX")
                     .with_extension("mp4");
                 ffmpeg::remux_to_mp4(&self.config.video_path, &mp4_path)?;
-                info!("Remuxed video to MP4: {}", mp4_path.display());
+                info!("[mux] Step 2.5: Remuxed to {}", mp4_path.display());
                 self.xmp.set_motionphoto_mime("video/mp4")?;
                 effective_video_path = mp4_path.clone();
                 remuxed_video = Some(mp4_path);
@@ -151,7 +154,9 @@ impl<'et> Muxer<'et> {
         }
 
         // Step 3: Extract Live Photo keyframe timestamp (from original video, not remuxed)
+        info!("[mux] Step 3: Reading QuickTime tracks...");
         let track_xml = self.exiftool.quicktime_tracks(&self.config.video_path)?;
+        info!("[mux] Step 3: Done");
         if let Some(track_num) = extract_track_number(&track_xml) {
             info!("Live Photo keyframe track number: {}", track_num);
             if let Some(duration_us) = extract_track_duration(&track_num, &track_xml) {
@@ -164,11 +169,14 @@ impl<'et> Muxer<'et> {
         }
 
         // Step 4: Build SamsungTags
+        info!("[mux] Step 4: Building Samsung tags...");
         let video_data = fs::read(&effective_video_path)?;
         let samsung_tail = SamsungTags::new(video_data, image_type);
 
         // Step 5: Merge source XMP
+        info!("[mux] Step 5: Reading source XMP...");
         let source_xmp = self.exiftool.read_xmp(&self.config.image_path)?;
+        info!("[mux] Step 5: Done");
         if source_xmp.trim().is_empty() {
             warn!("XMP of original file is empty");
         } else if let Err(e) = self.xmp.merge_source_xmp(&source_xmp) {
@@ -182,18 +190,24 @@ impl<'et> Muxer<'et> {
         self.xmp.set_primary_padding(image_padding)?;
 
         // Step 7: Write XMP sidecar (e.g. "IMG.LIVE.HEIC.XMP")
+        info!("[mux] Step 7: Writing XMP sidecar...");
         let xmp_sidecar = PathBuf::from(format!("{}.XMP", self.output_fpath.display()));
         fs::write(&xmp_sidecar, self.xmp.to_bytes())?;
 
         // Step 8: Copy image and embed XMP
+        info!("[mux] Step 8: Embedding XMP...");
         let xmp_image = enrich_fname(&self.output_fpath, "XMP");
         fs::copy(&self.config.image_path, &xmp_image)?;
         self.exiftool.embed_xmp(&xmp_sidecar, &xmp_image)?;
+        info!("[mux] Step 8: Done");
 
         // Step 8.5: Remove Apple Live Photo metadata from the output
+        info!("[mux] Step 8.5: Removing Apple MakerNotes...");
         self.exiftool.remove_apple_livephoto_tags(&xmp_image)?;
+        info!("[mux] Step 8.5: Done");
 
         // Step 9: Read XMP-enriched image and finalize
+        info!("[mux] Step 9: Building final output...");
         let mut merged_bytes = fs::read(&xmp_image)?;
         let mut samsung_tail = {
             let video_data = fs::read(&effective_video_path)?;

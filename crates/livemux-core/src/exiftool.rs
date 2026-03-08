@@ -1,6 +1,8 @@
 use std::io::{BufRead, BufReader, BufWriter, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+
+use tracing::info;
 
 use crate::error::{LiveMuxError, Result};
 
@@ -18,10 +20,24 @@ pub struct ExifTool {
 }
 
 impl ExifTool {
-    /// Spawn a persistent ExifTool process.
+    /// Spawn a persistent ExifTool process using the system `exiftool`.
     pub fn spawn() -> Result<Self> {
-        let mut process = Command::new("exiftool")
-            .args(["-stay_open", "True", "-@", "-"])
+        Self::spawn_with_path(None)
+    }
+
+    /// Spawn a persistent ExifTool process.
+    ///
+    /// If `bundled_dir` is provided, looks for the bundled exiftool script there first.
+    /// Falls back to the system `exiftool` if the bundled version is not found.
+    pub fn spawn_with_path(bundled_dir: Option<&Path>) -> Result<Self> {
+        let (program, args) = Self::resolve_exiftool(bundled_dir);
+        info!("Starting ExifTool: {} {:?}", program.display(), args);
+
+        let mut cmd_args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+        cmd_args.extend_from_slice(&["-stay_open", "True", "-@", "-"]);
+
+        let mut process = Command::new(&program)
+            .args(&cmd_args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -55,33 +71,29 @@ impl ExifTool {
         })
     }
 
+    /// Resolve the exiftool executable path.
+    ///
+    /// Priority:
+    /// 1. Bundled exiftool script in `bundled_dir` (run via `perl`)
+    /// 2. System `exiftool` on PATH
+    fn resolve_exiftool(bundled_dir: Option<&Path>) -> (PathBuf, Vec<String>) {
+        if let Some(dir) = bundled_dir {
+            let script = dir.join("exiftool");
+            if script.exists() {
+                // Use perl to run the bundled script
+                return (PathBuf::from("perl"), vec![script.to_string_lossy().into_owned()]);
+            }
+        }
+        // Fallback to system exiftool
+        (PathBuf::from("exiftool"), vec![])
+    }
+
     /// Send arbitrary args to ExifTool and return stdout as String.
     pub fn execute(&mut self, args: &[&str]) -> Result<String> {
-        self.seq += 1;
-        let sentinel = format!("{{ready{}}}", self.seq);
-
-        for arg in args {
-            writeln!(self.stdin, "{}", arg)?;
-        }
-        writeln!(self.stdin, "-execute{}", self.seq)?;
-        self.stdin.flush()?;
-
-        let mut output = String::new();
-        let mut line = String::new();
-        loop {
-            line.clear();
-            let bytes_read = self.stdout.read_line(&mut line)?;
-            if bytes_read == 0 {
-                return Err(LiveMuxError::ExifTool {
-                    message: "ExifTool process terminated unexpectedly".into(),
-                });
-            }
-            if line.trim_end() == sentinel {
-                break;
-            }
-            output.push_str(&line);
-        }
-        Ok(output)
+        let bytes = self.execute_bytes(args)?;
+        String::from_utf8(bytes).map_err(|e| LiveMuxError::ExifTool {
+            message: format!("ExifTool output is not valid UTF-8: {e}"),
+        })
     }
 
     /// Send args to ExifTool and return stdout as raw bytes.
@@ -105,15 +117,13 @@ impl ExifTool {
                 });
             }
 
-            // Search for sentinel in buffer
             let buf_len = buf.len();
             output.extend_from_slice(buf);
             self.stdout.consume(buf_len);
 
-            // Check if output ends with sentinel + newline
             if let Some(pos) = find_subsequence(&output, sentinel_bytes) {
                 output.truncate(pos);
-                // Trim trailing newline before sentinel
+                // Trim trailing newline/carriage-return before sentinel
                 while output.last() == Some(&b'\n') || output.last() == Some(&b'\r') {
                     output.pop();
                 }

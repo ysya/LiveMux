@@ -1,9 +1,10 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use serde::Serialize;
 use tauri::Emitter;
+use tauri::Manager;
 
 use livemux_core::batch::{self, BatchConfig, BatchProgress};
 use livemux_core::exiftool::ExifTool;
@@ -12,8 +13,9 @@ use livemux_core::muxer::{Muxer, MuxerConfig};
 
 const IMAGE_EXTENSIONS: &[&str] = &["heic", "heif", "avif", "jpg", "jpeg"];
 
+/// Shared state holding the resolved path to the bundled exiftool directory.
 pub struct AppState {
-    pub exiftool: Arc<Mutex<ExifTool>>,
+    pub exiftool_dir: Option<Arc<PathBuf>>,
 }
 
 #[derive(Clone, Serialize)]
@@ -31,11 +33,14 @@ struct AdbPushProgress {
     error: Option<String>,
 }
 
+fn spawn_exiftool(state: &AppState) -> Result<ExifTool, String> {
+    let dir = state.exiftool_dir.as_deref().map(|p| p.as_path());
+    ExifTool::spawn_with_path(dir).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
-fn check_exiftool() -> Result<String, String> {
-    ExifTool::spawn()
-        .map(|_| "ok".into())
-        .map_err(|e| e.to_string())
+fn check_exiftool(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    spawn_exiftool(&state).map(|_| "ok".into())
 }
 
 #[tauri::command]
@@ -49,8 +54,6 @@ fn check_adb() -> bool {
     match output {
         Ok(out) => {
             let stdout = String::from_utf8_lossy(&out.stdout);
-            // "adb devices" output: first line is header, subsequent lines are devices
-            // A connected device line looks like: "SERIAL\tdevice"
             stdout
                 .lines()
                 .skip(1)
@@ -84,9 +87,10 @@ async fn mux_single(
     state: tauri::State<'_, AppState>,
     config: MuxerConfig,
 ) -> Result<String, String> {
-    let et = state.exiftool.clone();
+    let et_dir = state.exiftool_dir.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let mut et = et.lock().map_err(|e| e.to_string())?;
+        let dir = et_dir.as_deref().map(|p| p.as_path());
+        let mut et = ExifTool::spawn_with_path(dir).map_err(|e| e.to_string())?;
         let mut muxer = Muxer::new(config, &mut et).map_err(|e| e.to_string())?;
         muxer.mux().map_err(|e| e.to_string())?;
         Ok("ok".into())
@@ -109,9 +113,10 @@ async fn mux_directory(
         },
     );
 
-    let et = state.exiftool.clone();
+    let et_dir = state.exiftool_dir.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let mut et = et.lock().map_err(|e| e.to_string())?;
+        let dir = et_dir.as_deref().map(|p| p.as_path());
+        let mut et = ExifTool::spawn_with_path(dir).map_err(|e| e.to_string())?;
         let window2 = window.clone();
         batch::mux_directory(
             &config,
@@ -167,7 +172,7 @@ async fn adb_push_directory(
 
         // Collect image files from source directory
         let source_path = Path::new(&source_dir);
-        let mut files: Vec<std::path::PathBuf> = Vec::new();
+        let mut files: Vec<PathBuf> = Vec::new();
 
         let entries = std::fs::read_dir(source_path)
             .map_err(|e| format!("Failed to read directory: {e}"))?;
@@ -254,12 +259,32 @@ async fn adb_push_directory(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let et = ExifTool::spawn().expect("Failed to start ExifTool. Is exiftool installed?");
+    // Set up tracing for debug logging (visible in cargo tauri dev console)
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .with_target(false)
+        .init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .manage(AppState {
-            exiftool: Arc::new(Mutex::new(et)),
+        .setup(|app| {
+            // Resolve bundled exiftool resource path
+            let resource_path = app
+                .path()
+                .resource_dir()
+                .ok()
+                .map(|dir| dir.join("resources").join("exiftool"));
+
+            let exiftool_dir = resource_path.filter(|p| p.join("exiftool").exists());
+
+            app.manage(AppState {
+                exiftool_dir: exiftool_dir.map(|p| Arc::new(p)),
+            });
+
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             check_exiftool,
