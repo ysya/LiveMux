@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "identifier": "com.livemux.app",
   "build": {
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://localhost:5177",
     "frontendDist": "../ui/dist",
     "beforeDevCommand": "cd ../ui && pnpm dev",
     "beforeBuildCommand": "cd ../ui && pnpm build"

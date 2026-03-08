@@ -13,7 +13,7 @@ export default defineConfig({
   // Prevent vite from obscuring Tauri Rust errors
   clearScreen: false,
   server: {
-    port: 5173,
+    port: 5177,
     strictPort: true,
   },
 })
