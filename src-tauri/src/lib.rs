@@ -48,19 +48,74 @@ fn check_ffmpeg() -> bool {
     ffmpeg::check_ffmpeg()
 }
 
+#[derive(Clone, Serialize)]
+struct AdbDevice {
+    serial: String,
+    model: String,
+}
+
 #[tauri::command]
-fn check_adb() -> bool {
-    let output = Command::new("adb").arg("devices").output();
+fn list_adb_devices() -> Vec<AdbDevice> {
+    let output = Command::new("adb").arg("devices").arg("-l").output();
     match output {
         Ok(out) => {
             let stdout = String::from_utf8_lossy(&out.stdout);
             stdout
                 .lines()
                 .skip(1)
-                .any(|line| line.contains("\tdevice"))
+                .filter(|line| line.contains(" device ") || line.ends_with("\tdevice"))
+                .map(|line| {
+                    let serial = line.split_whitespace().next().unwrap_or("").to_string();
+                    let model = line
+                        .split_whitespace()
+                        .find_map(|tok| tok.strip_prefix("model:"))
+                        .unwrap_or(&serial)
+                        .to_string();
+                    AdbDevice { serial, model }
+                })
+                .collect()
         }
-        Err(_) => false,
+        Err(_) => vec![],
     }
+}
+
+#[derive(Clone, Serialize)]
+struct DeviceDir {
+    name: String,
+    has_children: bool,
+}
+
+#[tauri::command]
+fn list_device_dirs(serial: String, path: String) -> Result<Vec<DeviceDir>, String> {
+    let output = Command::new("adb")
+        .args(["-s", &serial, "shell", &format!(
+            "ls -1p {} 2>/dev/null", shell_escape(&path)
+        )])
+        .output()
+        .map_err(|e| format!("Failed to run adb: {e}"))?;
+
+    if !output.status.success() {
+        return Err("Failed to list directory".into());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let dirs: Vec<DeviceDir> = stdout
+        .lines()
+        .filter(|line| line.ends_with('/'))
+        .map(|line| {
+            let name = line.trim_end_matches('/').to_string();
+            DeviceDir {
+                name,
+                has_children: true,
+            }
+        })
+        .collect();
+    Ok(dirs)
+}
+
+/// Minimal shell escaping for adb shell arguments.
+fn shell_escape(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
 }
 
 #[tauri::command]
@@ -144,13 +199,14 @@ async fn mux_directory(
 #[tauri::command]
 async fn adb_push_directory(
     window: tauri::Window,
+    serial: String,
     source_dir: String,
     target_dir: String,
 ) -> Result<String, String> {
     tauri::async_runtime::spawn_blocking(move || {
         // Create target directory on device
         let mkdir = Command::new("adb")
-            .args(["shell", "mkdir", "-p", &target_dir])
+            .args(["-s", &serial, "shell", "mkdir", "-p", &target_dir])
             .output()
             .map_err(|e| format!("Failed to run adb: {e}"))?;
 
@@ -170,7 +226,7 @@ async fn adb_push_directory(
             },
         );
 
-        // Collect image files from source directory
+        // Collect all files from source directory
         let source_path = Path::new(&source_dir);
         let mut files: Vec<PathBuf> = Vec::new();
 
@@ -179,13 +235,13 @@ async fn adb_push_directory(
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() {
-                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                    if IMAGE_EXTENSIONS.contains(&ext.to_lowercase().as_str()) {
-                        files.push(path);
-                    }
-                }
+            if !path.is_file() {
+                continue;
             }
+            if path.file_name().map_or(false, |n| n.to_string_lossy().starts_with('.')) {
+                continue;
+            }
+            files.push(path);
         }
 
         files.sort();
@@ -207,7 +263,7 @@ async fn adb_push_directory(
             );
 
             let result = Command::new("adb")
-                .args(["push", &file_str, &format!("{}/", target_dir)])
+                .args(["-s", &serial, "push", &file_str, &format!("{}/", target_dir)])
                 .output();
 
             let (status, error) = match result {
@@ -221,6 +277,7 @@ async fn adb_push_directory(
                     );
                     let _ = Command::new("adb")
                         .args([
+                            "-s", &serial,
                             "shell",
                             "am",
                             "broadcast",
@@ -289,7 +346,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             check_exiftool,
             check_ffmpeg,
-            check_adb,
+            list_adb_devices,
+            list_device_dirs,
             count_image_files,
             mux_single,
             mux_directory,

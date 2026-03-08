@@ -83,10 +83,12 @@ where
     on_scan_complete(total);
 
     let mut matched_images: HashSet<PathBuf> = HashSet::new();
+    let mut matched_videos: HashSet<PathBuf> = HashSet::new();
 
     for (i, (image, video)) in pairs.iter().enumerate() {
         info!("==[{}/{}]", i + 1, total);
         matched_images.insert(image.clone());
+        matched_videos.insert(video.clone());
 
         // Emit "processing" before starting this file
         on_progress(BatchProgress {
@@ -156,10 +158,16 @@ where
         });
     }
 
-    // Copy unmuxed images
+    // Copy unmatched files (images and videos that weren't part of any pair)
     if config.copy_unmuxed {
         if let Some(ref out_dir) = config.output_dir {
-            copy_unmatched_images(&config.directory, config.recursive, &matched_images, out_dir)?;
+            copy_unmatched_files(
+                &config.directory,
+                config.recursive,
+                &matched_images,
+                &matched_videos,
+                out_dir,
+            )?;
         } else {
             warn!("--copy-unmuxed requires --output-dir");
         }
@@ -259,10 +267,11 @@ pub fn find_pairs_by_exif(
     Ok(pairs)
 }
 
-fn copy_unmatched_images(
+fn copy_unmatched_files(
     dir: &Path,
     recursive: bool,
-    matched: &HashSet<PathBuf>,
+    matched_images: &HashSet<PathBuf>,
+    matched_videos: &HashSet<PathBuf>,
     output_dir: &Path,
 ) -> Result<()> {
     let walker = if recursive {
@@ -273,11 +282,22 @@ fn copy_unmatched_images(
 
     for entry in walker.into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
-        if path.is_file() && is_image(path) && !matched.contains(path) {
+        if !path.is_file() {
+            continue;
+        }
+        // Skip hidden files (e.g. .DS_Store)
+        if path.file_name().map_or(false, |n| n.to_string_lossy().starts_with('.')) {
+            continue;
+        }
+        // Skip files that were already muxed as part of a pair
+        if matched_images.contains(path) || matched_videos.contains(path) {
+            continue;
+        }
+        {
             let dest = output_dir.join(path.file_name().unwrap());
             if !dest.exists() {
-                info!("Copying unmuxed: {}", path.display());
-                fs::copy(path, dest)?;
+                info!("Copying unmatched: {}", path.display());
+                fs::copy(path, &dest)?;
             }
         }
     }
