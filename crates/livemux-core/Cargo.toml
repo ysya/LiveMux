@@ -1,7 +1,7 @@
 [package]
 name = "livemux-core"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 description = "Core library for LiveMux — mux HEIC/JPG Live Photos into Motion Photos"
 
 [dependencies]

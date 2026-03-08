@@ -1,0 +1,17 @@
+[workspace]
+shared-version = true
+tag-name = "v{{version}}"
+tag-message = "v{{version}}"
+
+# Interactive confirmation before each step (like release-it)
+pre-release-commit-message = "chore: release v{{version}}"
+publish = false          # We don't publish to crates.io
+push = true
+tag = true
+
+# Also update the version in tauri.conf.json
+[[pre-release-replacements]]
+file = "src-tauri/tauri.conf.json"
+search = '"version": ".*"'
+replace = '"version": "{{version}}"'
+exactly = 1
