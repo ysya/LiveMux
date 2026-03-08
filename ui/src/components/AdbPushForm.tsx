@@ -91,7 +91,7 @@ export function AdbPushForm() {
 
   useEffect(() => {
     if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight
+      listRef.current.scrollTop = 0
     }
   }, [completedItems])
 
@@ -299,7 +299,7 @@ export function AdbPushForm() {
         {/* Completed list */}
         {completedItems.length > 0 && (
           <div ref={listRef} className="max-h-48 overflow-y-auto space-y-1 text-xs">
-            {completedItems.map((item, i) => (
+            {[...completedItems].reverse().map((item, i) => (
               <div key={i} className="flex items-center gap-2">
                 {item.status === "done" ? (
                   <Badge variant="secondary" className="text-success">

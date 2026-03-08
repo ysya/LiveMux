@@ -37,7 +37,7 @@ export function DirForm() {
 
   useEffect(() => {
     if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight
+      listRef.current.scrollTop = 0
     }
   }, [progressItems])
 
@@ -225,7 +225,7 @@ export function DirForm() {
         {/* Progress list */}
         {progressItems.length > 0 && (
           <div ref={listRef} className="max-h-48 overflow-y-auto space-y-1 text-xs">
-            {progressItems.map((item, i) => (
+            {[...progressItems].reverse().map((item, i) => (
               <div key={i} className="flex items-center gap-2">
                 {item.success ? (
                   <Badge variant="secondary" className="text-success">{t("batch.ok")}</Badge>
