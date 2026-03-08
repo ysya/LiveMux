@@ -9,7 +9,37 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - name: Install and build frontend
+        working-directory: ui
+        run: |
+          pnpm install
+          pnpm build
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: ui/dist
+
+  build-tauri:
+    needs: build-frontend
     strategy:
       fail-fast: false
       matrix:
@@ -26,17 +56,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
         with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: ui/pnpm-lock.yaml
+          name: frontend-dist
+          path: ui/dist
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -48,12 +72,6 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
-      - name: Install and build frontend
-        working-directory: ui
-        run: |
-          pnpm install
-          pnpm build
-
       # Windows: download ExifTool standalone exe and swap bundle resources
       - name: Setup ExifTool (Windows)
         if: matrix.platform == 'windows-latest'
@@ -64,7 +82,6 @@ jobs:
           Expand-Archive -Path exiftool.zip -DestinationPath exiftool-tmp
           New-Item -ItemType Directory -Force -Path src-tauri/resources/exiftool-win
           Move-Item exiftool-tmp/exiftool*.exe src-tauri/resources/exiftool-win/exiftool.exe
-          # Replace bundle resources to point to Windows exe instead of Perl scripts
           $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
           $conf.bundle.resources = @{ "resources/exiftool-win/exiftool.exe" = "resources/exiftool-win/exiftool.exe" }
           $conf | ConvertTo-Json -Depth 10 | Set-Content src-tauri/tauri.conf.json
@@ -79,6 +96,5 @@ jobs:
           releaseBody: See the assets below to download the installer for your platform.
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          args: ${{ matrix.args }} --config '{"build":{"beforeBuildCommand":""}}'
           projectPath: src-tauri
-          beforeBuildCommand: ""
