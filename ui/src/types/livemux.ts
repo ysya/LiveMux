@@ -25,6 +25,7 @@ export interface BatchProgress {
   current: number
   total: number
   file: string
+  status: "processing" | "done" | "error" | "skipped"
   success: boolean
   error: string | null
 }

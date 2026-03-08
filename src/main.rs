@@ -71,8 +71,10 @@ fn main() -> Result<()> {
                     info!("Found {} image/video pairs", total);
                 },
                 |progress| {
-                    if progress.success {
-                        info!("[{}/{}] {}", progress.current, progress.total, progress.file);
+                    if progress.status == "processing" {
+                        info!("[{}/{}] Processing: {}", progress.current, progress.total, progress.file);
+                    } else if progress.success {
+                        info!("[{}/{}] Done: {}", progress.current, progress.total, progress.file);
                     }
                 },
             )?;

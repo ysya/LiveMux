@@ -45,6 +45,7 @@ pub struct BatchProgress {
     pub current: usize,
     pub total: usize,
     pub file: String,
+    pub status: String, // "processing" | "done" | "error" | "skipped"
     pub success: bool,
     pub error: Option<String>,
 }
@@ -87,6 +88,16 @@ where
         info!("==[{}/{}]", i + 1, total);
         matched_images.insert(image.clone());
 
+        // Emit "processing" before starting this file
+        on_progress(BatchProgress {
+            current: i + 1,
+            total,
+            file: image.display().to_string(),
+            status: "processing".into(),
+            success: false,
+            error: None,
+        });
+
         if config.incremental {
             let out_path = if let Some(ref out_dir) = config.output_dir {
                 out_dir.join(image.file_name().unwrap())
@@ -102,6 +113,7 @@ where
                     current: i + 1,
                     total,
                     file: image.display().to_string(),
+                    status: "skipped".into(),
                     success: true,
                     error: Some("Skipped (already muxed)".into()),
                 });
@@ -120,17 +132,17 @@ where
             no_xmp: false,
         };
 
-        let (success, err_msg) = match Muxer::new(mux_config, et) {
+        let (status, success, err_msg) = match Muxer::new(mux_config, et) {
             Ok(mut muxer) => match muxer.mux() {
-                Ok(()) => (true, None),
+                Ok(()) => ("done".into(), true, None),
                 Err(e) => {
                     error!("Failed to mux {} + {}: {:#}", image.display(), video.display(), e);
-                    (false, Some(e.to_string()))
+                    ("error".into(), false, Some(e.to_string()))
                 }
             },
             Err(e) => {
                 error!("Failed to create muxer for {} + {}: {:#}", image.display(), video.display(), e);
-                (false, Some(e.to_string()))
+                ("error".into(), false, Some(e.to_string()))
             }
         };
 
@@ -138,6 +150,7 @@ where
             current: i + 1,
             total,
             file: image.display().to_string(),
+            status,
             success,
             error: err_msg,
         });

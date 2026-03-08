@@ -71,9 +71,16 @@ export function DirForm() {
     const unlisten = await listen<BatchProgress>("mux-progress", (event) => {
       const p = event.payload
       setPhase("processing")
-      setCurrentProcessing({ current: p.current, total: p.total, file: p.file })
-      setProgressItems((prev) => [...prev, p])
-      setProgressPercent(Math.round((p.current / p.total) * 100))
+      if (p.status === "processing") {
+        // File is starting — show current file, update progress to reflect completed so far
+        setCurrentProcessing({ current: p.current, total: p.total, file: p.file })
+        setProgressPercent(Math.round(((p.current - 1) / p.total) * 100))
+      } else {
+        // File completed — add to results, clear current
+        setCurrentProcessing(null)
+        setProgressItems((prev) => [...prev, p])
+        setProgressPercent(Math.round((p.current / p.total) * 100))
+      }
     })
 
     const config: BatchConfig = {
@@ -167,30 +174,35 @@ export function DirForm() {
         </Button>
 
         {/* Progress */}
-        {status === "running" && phase === "scanning" && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-            <span>{t("batch.scanning")}</span>
-          </div>
-        )}
-        {pairsFound !== null && pairsFound === 0 && status === "running" && (
-          <div className="text-sm text-yellow-600 dark:text-yellow-400">
-            {t("batch.noPairs")}
-          </div>
-        )}
-        {status === "running" && phase === "processing" && (
+        {status === "running" && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Progress value={progressPercent} className="flex-1" />
-              <span className="text-xs text-muted-foreground tabular-nums shrink-0">{progressPercent}%</span>
-            </div>
-            {currentProcessing && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                <span className="truncate">
-                  [{currentProcessing.current}/{currentProcessing.total}] {fileName(currentProcessing.file)}
-                </span>
+            {/* Phase indicator */}
+            {phase === "scanning" && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                <span>{t("batch.scanning")}</span>
               </div>
+            )}
+            {phase === "processing" && pairsFound === 0 && (
+              <div className="text-sm text-yellow-600 dark:text-yellow-400">
+                {t("batch.noPairs")}
+              </div>
+            )}
+            {phase === "processing" && (pairsFound ?? 0) > 0 && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Progress value={progressPercent} className="flex-1" />
+                  <span className="text-xs text-muted-foreground tabular-nums shrink-0">{progressPercent}%</span>
+                </div>
+                {currentProcessing && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                    <span className="truncate">
+                      [{currentProcessing.current}/{currentProcessing.total}] {fileName(currentProcessing.file)}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

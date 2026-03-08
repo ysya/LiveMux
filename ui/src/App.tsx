@@ -28,31 +28,30 @@ function App() {
   }
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <div className="flex justify-end mb-2">
-        <Button variant="ghost" size="sm" onClick={toggleLanguage}>
-          {i18n.language === "zh-TW" ? "EN" : "中文"}
-        </Button>
-      </div>
-
+    <div className="p-4 mx-auto">
       {exiftoolOk === false && (
-        <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+        <div className="mb-3 p-2.5 rounded-md bg-destructive/10 text-destructive text-sm">
           {t("app.exiftoolError")}
         </div>
       )}
 
       {ffmpegOk === false && (
-        <div className="mb-4 p-3 rounded-md bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 text-sm">
+        <div className="mb-3 p-2.5 rounded-md bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 text-sm">
           {t("app.ffmpegWarning")}
         </div>
       )}
 
       <Tabs defaultValue="mux">
-        <TabsList className="mb-4">
-          <TabsTrigger value="mux">{t("app.tabMux")}</TabsTrigger>
-          <TabsTrigger value="dir">{t("app.tabBatch")}</TabsTrigger>
-          <TabsTrigger value="adb">{t("app.tabAdb")}</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between mb-3">
+          <TabsList>
+            <TabsTrigger value="mux">{t("app.tabMux")}</TabsTrigger>
+            <TabsTrigger value="dir">{t("app.tabBatch")}</TabsTrigger>
+            <TabsTrigger value="adb">{t("app.tabAdb")}</TabsTrigger>
+          </TabsList>
+          <Button variant="ghost" size="sm" onClick={toggleLanguage}>
+            {i18n.language === "zh-TW" ? "EN" : "中文"}
+          </Button>
+        </div>
         <TabsContent value="mux">
           <MuxForm />
         </TabsContent>
